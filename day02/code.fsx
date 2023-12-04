@@ -1,7 +1,6 @@
 #r "nuget: FParsec"
 open FParsec
 
-// module parser =
 let str s = pstring s
 let comma: Parser<string, unit> = str ","
 let semicolon: Parser<string, unit> = str ";"
@@ -22,14 +21,42 @@ let numberOfCube: Parser<(int32 * string), unit> =
 let cubeSet: Parser<list<int32 * string>, unit> = sepBy numberOfCube comma
 let gameSet = game .>>. (sepBy cubeSet semicolon) .>> newline
 
-let input =
-    "Game 1: 3 blue, 4 red; 1 red, 2 green, 6 blue; 2 green
-Game 2: 1 blue, 2 green; 3 green, 4 blue, 1 red; 1 green, 1 blue
-Game 3: 8 green, 6 blue, 20 red; 5 blue, 4 red, 13 green; 5 green, 1 red
-Game 4: 1 green, 3 red, 6 blue; 3 green, 6 red; 3 green, 15 blue, 14 red
-Game 5: 6 red, 1 blue, 3 green; 2 blue, 1 red, 2 green
-"
+let ast =
+    (runParserOnFile (many gameSet) () "day02/input.txt" (System.Text.UTF8Encoding())
+     |> function
+         | Success (result, _, _) -> result
+         | Failure (_) -> failwith "Unable to Parse the file")
 
-run (many gameSet) input
+let folder (state: Map<string, int>) ((k, v): (string * int)) =
+    if not (state.ContainsKey k) then
+        state.Add(k, v)
+    else if state.[k] <= v then
+        state.Add(k, v)
+    else
+        state
 
-runParserOnFile (many gameSet) () "day02/input.txt" (System.Text.UTF8Encoding())
+let toMap setList =
+    setList
+    |> List.concat
+    |> List.map (fun (v, k) -> (k, v))
+    |> List.fold folder Map.empty
+
+let isHigherThan key value map =
+    Map.tryFind key map |> Option.defaultValue 0 > value
+
+let isMoreThanAvailableRed = isHigherThan "red" 12
+let isMoreThanAvailableGreen = isHigherThan "green" 13
+let isMoreThanAvailableBlue = isHigherThan "blue" 14
+
+let predicate (key: int, (m: Map<string, int>)) =
+    if isMoreThanAvailableRed m
+       || isMoreThanAvailableGreen m
+       || isMoreThanAvailableBlue m then
+        0
+    else
+        key
+
+ast
+|> List.map (fun ((_, i), setList) -> (i, setList |> toMap))
+|> List.map predicate
+|> List.sum
