@@ -56,7 +56,20 @@ let predicate (key: int, (m: Map<string, int>)) =
     else
         key
 
+// Part One
 ast
 |> List.map (fun ((_, i), setList) -> (i, setList |> toMap))
 |> List.map predicate
+|> List.sum
+
+// Part Two
+let power (key: int, (m: Map<string, int>)) =
+    m
+    |> Map.toList
+    |> List.map (fun (k, v) -> v)
+    |> List.reduce (*)
+
+ast
+|> List.map (fun ((_, i), setList) -> (i, setList |> toMap))
+|> List.map power
 |> List.sum
